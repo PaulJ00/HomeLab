@@ -1,0 +1,66 @@
+services:
+  grampsweb: &grampsweb
+    container_name: grampsweb
+    image: ghcr.io/gramps-project/grampsweb:latest
+    restart: always
+    ports:
+      - "0.0.0.0:8080:80"
+    environment: &grampsweb-env
+      GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
+      GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+      GRAMPSWEB_IGNORE_DB_LOCK: true
+    volumes:
+      - gramps_users:/app/users
+      - gramps_index:/app/indexdir
+      - gramps_thumb_cache:/app/thumbnail_cache
+      - gramps_cache:/app/cache
+      - gramps_secret:/app/secret
+      - gramps_db:/root/.gramps/grampsdb
+      - gramps_media:/app/media
+      - gramps_tmp:/tmp
+    networks:
+      - proxy-paul
+      - gramps
+
+  grampsweb_celery:
+      image: ghcr.io/gramps-project/grampsweb:latest
+      restart: always
+      container_name: grampsweb_celery
+      environment:
+        GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
+        GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
+        GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
+        GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+        GRAMPSWEB_IGNORE_DB_LOCK: true
+      depends_on:
+        - grampsweb_redis
+      networks:
+        - proxy-paul
+        - gramps
+      command: celery -A gramps_webapi.celery worker --loglevel=INFO
+
+
+  grampsweb_redis:
+    image: docker.io/library/redis:7.2.4-alpine
+    container_name: grampsweb_redis
+    restart: always
+    networks:
+      - gramps
+
+
+volumes:
+  gramps_users:
+  gramps_index:
+  gramps_thumb_cache:
+  gramps_cache:
+  gramps_secret:
+  gramps_db:
+  gramps_media:
+  gramps_tmp:
+
+networks:
+  gramps:
+  proxy-paul:
+    external: true

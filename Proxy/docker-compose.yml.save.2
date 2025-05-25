@@ -1,0 +1,44 @@
+services:
+  rev-Proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy-paul
+
+  crowdsec:
+    image: crowdsecurity/crowdsec
+    restart: always
+    environment:
+     #this is the list of collections we want to install    
+     #https://hub.crowdsec.net/author/crowdsecurity/collections/nginx
+      COLLECTIONS: "crowdsecurity/nginx"
+      GID: "${GID-1000}"
+    depends_on:
+      - rev-Proxy
+    proxy:
+      - 
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+      - ./crowdsec/config.yaml:/etc/crowdsec/config.yaml
+      - logs:/var/log/nginx
+      - crowdsec-db:/var/lib/crowdsec/data/
+      - crowdsec-config:/etc/crowdsec/
+    networks:
+      - proxy-paul
+
+networks:
+  proxy-paul:
+    external: true
+
+volumes:
+  logs:
+  crowdsec-db:
+  crowdsec-config:
