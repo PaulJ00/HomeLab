@@ -1,0 +1,5 @@
+# .gitignore
+./Proxy/data/
+*.key
+./Proxy/letsencrypt/
+
